@@ -217,7 +217,8 @@ public class MainActivityFragment extends Fragment {
         }
     }
 
-
+    /* code snippet from:
+        http://www.jayway.com/2012/12/12/creating-custom-android-views-part-4-measuring-and-how-to-force-a-view-to-be-square/ */
     public final class PosterImageView extends ImageView {
         public PosterImageView(Context context) {
             super(context);
@@ -250,6 +251,7 @@ public class MainActivityFragment extends Fragment {
             setMeasuredDimension(width, height);
         }
     }
+    /* end code snippet */
 
     public class ImageAdapter extends ArrayAdapter<String> {
 
