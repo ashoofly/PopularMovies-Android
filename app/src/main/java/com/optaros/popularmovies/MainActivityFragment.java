@@ -1,8 +1,11 @@
 package com.optaros.popularmovies;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.AttributeSet;
@@ -42,13 +45,22 @@ public class MainActivityFragment extends Fragment {
     private final String LOG_TAG = MainActivityFragment.class.getSimpleName();
 
     private ImageAdapter mAdapter;
+    private SharedPreferences prefs;
+    private Resources resources;
 
     public MainActivityFragment() {
     }
 
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+        getPreferences();
+    }
+
     @Override
     public void onStart() {
-        Log.v(LOG_TAG, "onStart() called...");
         super.onStart();
         updateMovies();
     }
@@ -69,9 +81,26 @@ public class MainActivityFragment extends Fragment {
         return rootView;
     }
 
+    private void getPreferences() {
+        prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        resources = getActivity().getResources();
+    }
+
+    private String getSortOrder() {
+        String sortOrder = prefs.getString(getString(R.string.pref_sort_key),
+                getString(R.string.pref_sort_order_default));
+        String[] sortChoices = resources.getStringArray(R.array.pref_sort_list_titles);
+        if (sortOrder.equals(getString(R.string.pref_sort_order_default))) {
+            return "popularity.desc";
+        } else {
+            return "vote_average.desc";
+        }
+    }
+
     private void updateMovies() {
+    //    Log.v(LOG_TAG, String.format("updateMovies() called... sorting by %s", getSortOrder()));
         FetchMovies moviesTask = new FetchMovies();
-        moviesTask.execute("popularity.desc", getResources().getString(R.string.tmdb_apikey));
+        moviesTask.execute(getSortOrder(), getResources().getString(R.string.tmdb_apikey));
     }
 
     public class FetchMovies extends AsyncTask<String, Void, String[]> {
@@ -105,7 +134,7 @@ public class MainActivityFragment extends Fragment {
 
                 URL url = new URL(builtUri.toString());
 
-                // Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+               // Log.v(LOG_TAG, "Built URI " + builtUri.toString());
 
 
                 // Create the request to OpenWeatherMap, and open the connection
@@ -135,7 +164,7 @@ public class MainActivityFragment extends Fragment {
                     return null;
                 }
                 moviesJsonStr = buffer.toString();
-                Log.v(LOG_TAG, "Movie JSON String: " + moviesJsonStr);
+//                Log.v(LOG_TAG, "Movie JSON String: " + moviesJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 // If the code didn't successfully get the weather data, there's no point in attemping
@@ -190,6 +219,9 @@ public class MainActivityFragment extends Fragment {
             final String TMDB_RESULTS = "results";
             final String TMDB_POSTER_URL = "poster_path";
 
+            // Get movie name
+            final String TMDB_MOVIE_TITLE = "title";
+
             //base URL strings
             final String BASE_URL = "http://image.tmdb.org/t/p/";
             final String POSTER_SIZE = "w500";
@@ -208,6 +240,7 @@ public class MainActivityFragment extends Fragment {
                         .appendPath(posterURL.substring(1))
                         .build().toString();
                 resultStrs[i] = fullURL;
+                Log.v(LOG_TAG, movie.getString(TMDB_MOVIE_TITLE));
             }
 //            for (String s : resultStrs) {
 //                Log.v(LOG_TAG, "Poster url: " + s);
