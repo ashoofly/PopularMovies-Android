@@ -1,6 +1,7 @@
 package com.optaros.popularmovies;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
@@ -15,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
@@ -43,6 +45,7 @@ public class MainActivityFragment extends Fragment {
 
 
     private final String LOG_TAG = MainActivityFragment.class.getSimpleName();
+    public static final String DETAIL_INTENT_EXTRA = "Movie Detail";
 
     private ImageAdapter mAdapter;
     private SharedPreferences prefs;
@@ -72,8 +75,17 @@ public class MainActivityFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         GridView gridview = (GridView)(rootView.findViewById(R.id.gridview));
         mAdapter = new ImageAdapter(getActivity(), R.layout.grid_item_view,
-                R.id.item_image, new ArrayList<String>());
+                R.id.item_image, new ArrayList<TMDBMovie>());
         gridview.setAdapter(mAdapter);
+        gridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                TMDBMovie movie = mAdapter.getItem(position);
+                Intent intent = new Intent(getActivity(), DetailActivity.class)
+                        .putExtra(DETAIL_INTENT_EXTRA, movie);
+                startActivity(intent);
+            }
+        });
 
 
 
@@ -103,12 +115,12 @@ public class MainActivityFragment extends Fragment {
         moviesTask.execute(getSortOrder(), getResources().getString(R.string.tmdb_apikey));
     }
 
-    public class FetchMovies extends AsyncTask<String, Void, String[]> {
+    public class FetchMovies extends AsyncTask<String, Void, TMDBMovie[]> {
 
         private final String LOG_TAG = FetchMovies.class.getSimpleName();
 
         @Override
-        protected String[] doInBackground(String... params) {
+        protected TMDBMovie[] doInBackground(String... params) {
 
             if (params.length != 2) {
                 return null;
@@ -194,11 +206,11 @@ public class MainActivityFragment extends Fragment {
         }
 
         @Override
-        protected void onPostExecute(String[] result) {
+        protected void onPostExecute(TMDBMovie[] result) {
             if (result != null) {
                 mAdapter.clear();
-                for (String posterURL : result) {
-                   mAdapter.add(posterURL);
+                for (TMDBMovie movie : result) {
+                   mAdapter.add(movie);
                 }
             }
             else
@@ -212,42 +224,59 @@ public class MainActivityFragment extends Fragment {
          * Fortunately parsing is easy:  constructor takes the JSON string and converts it
          * into an Object hierarchy for us.
          */
-        private String[] getMoviePosterURLsFromJson(String moviesJsonStr)
+        private TMDBMovie[] getMoviePosterURLsFromJson(String moviesJsonStr)
                 throws JSONException {
 
             // These are the names of the JSON objects that need to be extracted.
             final String TMDB_RESULTS = "results";
+            final String TMDB_MOVIE_TITLE = "title";
             final String TMDB_POSTER_URL = "poster_path";
+            final String TMDB_SYNOPSIS = "overview";
+            final String TMDB_USER_RATING = "vote_average";
+            final String TMDB_RELEASE_DATE = "release_date";
+
 
             // Get movie name
-            final String TMDB_MOVIE_TITLE = "title";
 
             //base URL strings
-            final String BASE_URL = "http://image.tmdb.org/t/p/";
             final String POSTER_SIZE = "w500";
+            final String THUMBNAIL_SIZE = "w342";
 
             JSONObject moviesJson = new JSONObject(moviesJsonStr);
             JSONArray moviesArray = moviesJson.getJSONArray(TMDB_RESULTS);
-            String[] resultStrs = new String[moviesArray.length()];
+            TMDBMovie[] results = new TMDBMovie[moviesArray.length()];
 
 
             for(int i = 0; i < moviesArray.length(); i++) {
                 // Get the JSON object representing the day
                 JSONObject movie = moviesArray.getJSONObject(i);
-                String posterURL = movie.getString(TMDB_POSTER_URL);
-                String fullURL = Uri.parse(BASE_URL).buildUpon()
-                        .appendPath(POSTER_SIZE)
-                        .appendPath(posterURL.substring(1))
-                        .build().toString();
-                resultStrs[i] = fullURL;
-                Log.v(LOG_TAG, movie.getString(TMDB_MOVIE_TITLE));
+
+                //create parcelable movie object
+                TMDBMovie movieObject = new TMDBMovie();
+                movieObject.movieTitle = movie.getString(TMDB_MOVIE_TITLE);
+                movieObject.synopsis = movie.getString(TMDB_SYNOPSIS);
+                movieObject.userRating = movie.getInt(TMDB_USER_RATING);
+                movieObject.releaseDate = movie.getString(TMDB_RELEASE_DATE);
+                String basePosterURL = movie.getString(TMDB_POSTER_URL);
+                movieObject.posterURL = getPosterImageURL(basePosterURL, POSTER_SIZE);
+                movieObject.thumbnailURL = getPosterImageURL(basePosterURL, THUMBNAIL_SIZE);
+
+                results[i] = movieObject;
             }
 //            for (String s : resultStrs) {
 //                Log.v(LOG_TAG, "Poster url: " + s);
 //            }
-            return resultStrs;
+            return results;
 
         }
+    }
+
+    private String getPosterImageURL(String basePosterURL, String size) {
+        final String BASE_IMAGES_URL = "http://image.tmdb.org/t/p/";
+        return Uri.parse(BASE_IMAGES_URL).buildUpon()
+                .appendPath(size)
+                .appendPath(basePosterURL.substring(1))
+                .build().toString();
     }
 
     /* code snippet from:
@@ -286,9 +315,9 @@ public class MainActivityFragment extends Fragment {
     }
     /* end code snippet */
 
-    public class ImageAdapter extends ArrayAdapter<String> {
+    public class ImageAdapter extends ArrayAdapter<TMDBMovie> {
 
-        public ImageAdapter(Context context, int resource, int textViewResourceId, List<String> objects) {
+        public ImageAdapter(Context context, int resource, int textViewResourceId, List<TMDBMovie> objects) {
             super(context, resource, textViewResourceId, objects);
         }
 
@@ -301,7 +330,7 @@ public class MainActivityFragment extends Fragment {
                 view = new PosterImageView(context);
                 view.setScaleType(ImageView.ScaleType.CENTER_CROP);
             }
-            String url = (String) this.getItem(position);
+            String url = (String) this.getItem(position).posterURL;
             Picasso.with(context).load(url).into(view);
 
             return view;
