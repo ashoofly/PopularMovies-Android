@@ -233,6 +233,7 @@ public class MainActivityFragment extends Fragment {
             final String TMDB_POSTER_URL = "poster_path";
             final String TMDB_SYNOPSIS = "overview";
             final String TMDB_USER_RATING = "vote_average";
+            final String TMDB_NUM_VOTES = "vote_count";
             final String TMDB_RELEASE_DATE = "release_date";
 
 
@@ -256,10 +257,12 @@ public class MainActivityFragment extends Fragment {
                 movieObject.movieTitle = movie.getString(TMDB_MOVIE_TITLE);
                 movieObject.synopsis = movie.getString(TMDB_SYNOPSIS);
                 movieObject.userRating = movie.getInt(TMDB_USER_RATING);
+                movieObject.numRatings = movie.getInt(TMDB_NUM_VOTES);
                 movieObject.releaseDate = movie.getString(TMDB_RELEASE_DATE);
                 String basePosterURL = movie.getString(TMDB_POSTER_URL);
                 movieObject.posterURL = getPosterImageURL(basePosterURL, POSTER_SIZE);
                 movieObject.thumbnailURL = getPosterImageURL(basePosterURL, THUMBNAIL_SIZE);
+
 
                 results[i] = movieObject;
             }

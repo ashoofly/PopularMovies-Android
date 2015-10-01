@@ -15,6 +15,7 @@ public class TMDBMovie implements Parcelable {
     public String posterURL;
     public String synopsis;
     public int userRating;
+    public int numRatings;
     public String releaseDate;
 
     public TMDBMovie() {
@@ -27,6 +28,7 @@ public class TMDBMovie implements Parcelable {
         dest.writeString(posterURL);
         dest.writeString(synopsis);
         dest.writeInt(userRating);
+        dest.writeInt(numRatings);
         dest.writeString(releaseDate);
     }
 
@@ -36,6 +38,7 @@ public class TMDBMovie implements Parcelable {
         posterURL = in.readString();
         synopsis = in.readString();
         userRating = in.readInt();
+        numRatings = in.readInt();
         releaseDate = in.readString();
     }
 
